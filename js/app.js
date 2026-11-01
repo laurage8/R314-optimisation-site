@@ -159,38 +159,79 @@
     }
   }
 
-  /* Aligne la hauteur des cartes et anime leur arrivée dans le viewport. */
+  /* Anime l'arrivée des cartes dans le viewport.
+     IntersectionObserver : le navigateur calcule lui-même l'intersection,
+     sans lecture géométrique dans un gestionnaire de scroll. Une carte
+     révélée n'est plus observée. La marge basse de -40 px reproduit
+     l'ancien test « rect.top < innerHeight - 40 ». */
   function revealCards() {
     var cards = UIKit.qsa('.card');
+    if (!cards.length) return;
 
-    for (var i = 0; i < cards.length; i++) {
-      var rect = cards[i].getBoundingClientRect();
-
-      // Hauteur de la plus grande carte, pour garder une grille régulière.
-      var tallest = 0;
-      var all = UIKit.qsa('.card');
-      for (var j = 0; j < all.length; j++) {
-        if (all[j].offsetHeight > tallest) {
-          tallest = all[j].offsetHeight;
+    if (!('IntersectionObserver' in window)) {
+      cards.forEach(function (c) { UIKit.cls(c, 'visible', true); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        // Comme avant : une carte déjà passée au-dessus de l'écran est révélée.
+        if (e.isIntersecting || e.boundingClientRect.top < 0) {
+          UIKit.cls(e.target, 'visible', true);
+          io.unobserve(e.target);
         }
       }
-      cards[i].style.minHeight = tallest + 'px';
+    }, { rootMargin: '0px 0px -40px 0px' });
+    cards.forEach(function (c) { io.observe(c); });
+  }
 
-      if (rect.top < window.innerHeight - 40) {
-        UIKit.cls(cards[i], 'visible', true);
-        cards[i].style.transform = 'translateY(0px)';
-      } else {
-        cards[i].style.transform = 'translateY(24px)';
-      }
-    }
+  /* Hauteur de la plus grande carte, pour garder une grille régulière.
+     Toutes les lectures, puis toutes les écritures : un seul calcul de mise
+     en page (avant : offsetHeight relu pour chaque carte, à l'intérieur
+     d'une boucle sur les cartes, entre deux écritures de style → n² reflows
+     forcés à chaque événement scroll). Ne dépend pas du scroll : recalculé
+     seulement au chargement et au redimensionnement. */
+  function equalizeCards() {
+    var cards = UIKit.qsa('.card');
+    if (!cards.length) return;
+    cards.forEach(function (c) { c.style.minHeight = ''; });   // écritures
+    var tallest = 0;
+    cards.forEach(function (c) {                               // lectures
+      if (c.offsetHeight > tallest) tallest = c.offsetHeight;
+    });
+    cards.forEach(function (c) { c.style.minHeight = tallest + 'px'; }); // écritures
+  }
 
-    // Les cases du calendrier apparaissent progressivement à l'approche.
-    var jours = UIKit.qsa('.cal-day');
-    for (var k = 0; k < jours.length; k++) {
-      var box = jours[k].getBoundingClientRect();
-      var d = Math.abs(box.top - window.innerHeight / 2);
-      jours[k].style.opacity = Math.max(0.15, 1 - d / window.innerHeight);
+  /* Les cases du calendrier apparaissent progressivement à l'approche
+     (opacité selon la distance au centre de l'écran, comme avant).
+     Les 7 cases d'une même ligne ont toujours la même position verticale :
+     au lieu de lire getBoundingClientRect() sur 371 cases à chaque cran de
+     molette, on lit une seule position (le haut de la grille) et on écrit
+     7 variables CSS, une par ligne (voir .calendar dans styles.css). */
+  var calendrier = null;
+  var PAS_LIGNE = 11 + 3; // hauteur d'une case + gouttière (cf. styles.css)
+  function fadeCalendar() {
+    if (!calendrier) return;
+    var top = calendrier.getBoundingClientRect().top;  // une seule lecture
+    var h = window.innerHeight;
+    for (var r = 0; r < 7; r++) {
+      var d = Math.abs(top + r * PAS_LIGNE - h / 2);
+      calendrier.style.setProperty('--o' + r, Math.max(0.15, 1 - d / h));
     }
+  }
+
+  /* Au plus une mise à jour par image affichée (requestAnimationFrame). */
+  var prevu = false;
+  function onScroll() {
+    if (prevu) return;
+    prevu = true;
+    requestAnimationFrame(function () { prevu = false; fadeCalendar(); });
+  }
+  var prevuResize = false;
+  function onResize() {
+    if (prevuResize) return;
+    prevuResize = true;
+    requestAnimationFrame(function () { prevuResize = false; equalizeCards(); fadeCalendar(); });
   }
 
   /* Affiche les images une fois chargées. */
@@ -211,11 +252,16 @@
     buildActivityCalendar();
     watchImages();
     revealCards();
+    equalizeCards();
+    calendrier = UIKit.qs('#calendrier');
+    fadeCalendar();
     var champ = UIKit.qs('#q');
     if (champ) champ.addEventListener('input', filterGallery);
   });
 
-  window.addEventListener('scroll', revealCards);
-  window.addEventListener('resize', revealCards);
-  window.addEventListener('load', revealCards);
+  // passive : on n'appelle jamais preventDefault(), le navigateur peut
+  // défiler sans attendre ce code.
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onResize);
+  window.addEventListener('load', function () { equalizeCards(); fadeCalendar(); });
 })();
