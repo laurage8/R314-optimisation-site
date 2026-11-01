@@ -99,6 +99,13 @@ a{color:var(--fg);text-decoration:none;opacity:.9}a:hover{opacity:1}
 .activity-legend span:first-child{margin-right:2px}
 .activity-legend span:last-child{margin-left:2px}
 
+/* Hauteur régulière des cartes : toutes les photos sont en 4:3 sauf img1
+   (16:9). La plus haute carte mesure donc toujours largeur × 3/4.
+   aspect-ratio l'impose dès le premier rendu (avant : min-height calculé
+   en JS après l'affichage → la carte 1 grandissait et poussait la carte 2,
+   CLS mesuré à 0,011 en profil mobile). */
+.card{aspect-ratio:4/3}
+
 /* --- Images responsives --- */
 .card picture{display:block}
 /* Page détail : l'image ne doit jamais dépasser son conteneur

@@ -165,9 +165,12 @@
 
   /* Anime l'arrivée des cartes dans le viewport.
      IntersectionObserver : le navigateur calcule lui-même l'intersection,
-     sans lecture géométrique dans un gestionnaire de scroll. Une carte
-     révélée n'est plus observée. La marge basse de -40 px reproduit
-     l'ancien test « rect.top < innerHeight - 40 ». */
+     sans lecture géométrique dans un gestionnaire de scroll, et seulement
+     quand une carte franchit le seuil (pas à chaque cran de molette).
+     La marge basse de -40 px reproduit l'ancien test
+     « rect.top < innerHeight - 40 ». Comme avant, une carte qui repasse
+     sous ce seuil reprend son décalage de 24 px, et l'animation se rejoue
+     à son retour. */
   function revealCards() {
     var cards = qsa('.card');
     if (!cards.length) return;
@@ -179,32 +182,22 @@
     var io = new IntersectionObserver(function (entries) {
       for (var i = 0; i < entries.length; i++) {
         var e = entries[i];
-        // Comme avant : une carte déjà passée au-dessus de l'écran est révélée.
+        // Visible, ou déjà passée au-dessus de l'écran : position normale.
         if (e.isIntersecting || e.boundingClientRect.top < 0) {
           e.target.classList.add('visible');
-          io.unobserve(e.target);
+          e.target.style.transform = 'translateY(0px)';
+        } else {
+          e.target.style.transform = 'translateY(24px)';
         }
       }
     }, { rootMargin: '0px 0px -40px 0px' });
     cards.forEach(function (c) { io.observe(c); });
   }
 
-  /* Hauteur de la plus grande carte, pour garder une grille régulière.
-     Toutes les lectures, puis toutes les écritures : un seul calcul de mise
-     en page (avant : offsetHeight relu pour chaque carte, à l'intérieur
-     d'une boucle sur les cartes, entre deux écritures de style → n² reflows
-     forcés à chaque événement scroll). Ne dépend pas du scroll : recalculé
-     seulement au chargement et au redimensionnement. */
-  function equalizeCards() {
-    var cards = qsa('.card');
-    if (!cards.length) return;
-    cards.forEach(function (c) { c.style.minHeight = ''; });   // écritures
-    var tallest = 0;
-    cards.forEach(function (c) {                               // lectures
-      if (c.offsetHeight > tallest) tallest = c.offsetHeight;
-    });
-    cards.forEach(function (c) { c.style.minHeight = tallest + 'px'; }); // écritures
-  }
+  /* L'égalisation des hauteurs de cartes (ancienne boucle offsetHeight de
+     revealCards) est désormais faite en CSS : .card{aspect-ratio:4/3} dans
+     styles.css. Appliquée dès le premier rendu, elle ne provoque plus de
+     décalage de mise en page (CLS). */
 
   /* Les cases du calendrier apparaissent progressivement à l'approche
      (opacité selon la distance au centre de l'écran, comme avant).
@@ -242,7 +235,7 @@
   function onResize() {
     if (prevuResize) return;
     prevuResize = true;
-    requestAnimationFrame(function () { prevuResize = false; equalizeCards(); fadeCalendar(); });
+    requestAnimationFrame(function () { prevuResize = false; fadeCalendar(); });
   }
 
   /* Affiche les images une fois chargées. */
@@ -263,7 +256,6 @@
     buildActivityCalendar();
     watchImages();
     revealCards();
-    equalizeCards();
     calendrier = qs('#calendrier');
     fadeCalendar();
     var champ = qs('#q');
@@ -277,5 +269,5 @@
   // défiler sans attendre ce code.
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onResize);
-  window.addEventListener('load', function () { equalizeCards(); fadeCalendar(); });
+  window.addEventListener('load', fadeCalendar);
 })();
