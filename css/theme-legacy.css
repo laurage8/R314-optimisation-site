@@ -2,13 +2,15 @@
    Conservé pour compatibilité avec les pages qui n'ont pas été reprises. */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
 
-/* Texture d'arrière-plan du bandeau principal. */
+/* Texture d'arrière-plan du bandeau principal.
+   Affichée à 4 % d'opacité : une version 480 px très compressée suffit
+   (l'ancien fichier était une copie 3968 px / 3,2 Mo de img6.jpg). */
 .hero{position:relative;overflow:hidden}
 .hero::before{
   content:"";
   position:absolute;
   inset:0;
-  background:url('../img/hero-bg.jpg') center / cover no-repeat;
+  background:url('../img/hero-bg.webp') center / cover no-repeat;
   opacity:.04;
   pointer-events:none;
 }
