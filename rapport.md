@@ -57,12 +57,20 @@ Le site est plus léger en profil ordinateur, parce que le navigateur choisit un
 
 **Pages image** (`img3.html`) : 1,5 Mo → 58 Ko en mobile, 10 → 5 requêtes, score 83 → 100 en mobile et 92 → 100 sur ordinateur.
 
-**PageSpeed Insights (sites en ligne)** — ⚠️ À COMPLÉTER
+**PageSpeed Insights (sites en ligne)** — mesuré le 1er novembre 2026, une analyse par site (captures `14` à `17` dans `audit/`).
 
-| PSI | Site du prof | Mon site |
+| PSI | Site du prof (avant) | Mon site (après) |
 |---|---|---|
-| Mobile : score / FCP / LCP / TBT / CLS | | |
-| Ordinateur : score / FCP / LCP / TBT / CLS | | |
+| **Mobile** : score | 60 | **97** |
+| FCP / LCP | 1,9 s / 66,8 s | **1,5 s / 2,4 s** |
+| TBT / CLS | 220 ms / 0 | **0 ms / 0** |
+| **Ordinateur** : score | 53 | **100** |
+| FCP / LCP | 1,0 s / 12,2 s | **0,4 s / 0,6 s** |
+| TBT / CLS | 290 ms / 0 | **0 ms / 0,021** |
+
+PageSpeed Insights confirme mes mesures : le LCP passe de 66,8 s à 2,4 s en mobile, et le TBT tombe à 0. Ses chiffres « avant » ne sont pas exactement les miens (par exemple un TBT de 220 ms au lieu de 1 850 ms en mobile) : ce n'est pas la même machine, et la méthodologie du prof explique que le TBT de ce site change beaucoup d'une mesure à l'autre. Comme je n'ai fait qu'une analyse par site, je compare surtout les ordres de grandeur.
+
+Sur ordinateur, mon site a un petit CLS de 0,021, qui reste dans le vert (en dessous de 0,1). Je ne l'avais pas dans mes mesures, où la police Google était bloquée. Mon hypothèse : c'est le changement de police au moment où Poppins arrive (`display=swap`), car le texte s'affiche d'abord dans une autre police un peu différente. C'est le prix à payer pour que le texte s'affiche tout de suite au lieu de rester invisible ; héberger la police sur le site (partie 7) permettrait de la précharger et de réduire ce petit saut.
 
 ---
 
@@ -156,7 +164,7 @@ Profil mobile, sauf la colonne « TBT ordi ». Mesure du milieu sur 3 à chaque 
 
 - **Le `defer` a fait monter le TBT** (étape 10 : 0,9 → 3,1 s). Le premier affichage est bien plus rapide (3,6 → 1,4 s), mais le calcul de 620 ms se fait toujours, juste plus tard, au moment où le TBT le compte. `defer` a déplacé le problème sans le supprimer. Il a vraiment disparu quand j'ai retiré la cause (étape 13).
 - **Le CSS inutile pesait peu en vrai** : 122,8 Ko sur le disque, mais 8,4 Ko une fois compressé, puis 2,3 Ko après nettoyage. Sans compression, ce problème aurait paru 10 fois plus grave.
-- **Les commits 6 et 9** ne changent rien de mesurable sur l'accueil. Le 6 concerne les pages image, où il répare l'affichage et divise le poids par 26. Le 9 (polices) ne pouvait pas se mesurer chez moi, car Google Fonts était bloqué : son effet se verra sur PageSpeed Insights.
+- **Les commits 6 et 9** ne changent rien de mesurable sur l'accueil. Le 6 concerne les pages image, où il répare l'affichage et divise le poids par 26. Le 9 (polices) ne pouvait pas se mesurer chez moi, car Google Fonts était bloqué. Sur PageSpeed Insights, le texte s'affiche bien tout de suite, mais le changement de police crée un petit CLS de 0,021 sur ordinateur (voir partie 2).
 - **Le CLS de 0,011 est apparu en cours de route** (étape 14). Il existait déjà, mais il était caché par des images très lentes. Je l'ai corrigé à la source (étape 16).
 - **Les ombres et le flou de la barre du haut** coûtent un peu à l'affichage. Mais quand j'ai désactivé seulement le fondu du calendrier, il ne restait qu'une long task : ils ne posent donc pas de problème ici, et je les ai gardés pour ne rien changer au rendu.
 
