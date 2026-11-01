@@ -1,10 +1,14 @@
 /* ============================================================
    app.js — interactions de la galerie SlowSite
    Révélation des vignettes au scroll + nuage de mots-clés.
-   Dépend de js/vendor/ui-kit.min.js (UIKit).
+   JavaScript natif, sans dépendance (ui-kit.min.js retiré, cf. rapport).
    ============================================================ */
 (function () {
   'use strict';
+
+  /* Équivalents natifs des 4 helpers de ui-kit réellement utilisés. */
+  function qs(s) { return document.querySelector(s); }
+  function qsa(s) { return Array.prototype.slice.call(document.querySelectorAll(s)); }
 
   /* Vocabulaire d'indexation de la photothèque. */
   var TAGS = [
@@ -72,7 +76,7 @@
   /* Alimente les suggestions du champ de filtrage avec le vocabulaire
      d'indexation de la photothèque. */
   function buildKeywordIndex() {
-    var list = UIKit.qs('#motscles');
+    var list = qs('#motscles');
     if (!list) return;
 
     // Une seule insertion dans le DOM : `innerHTML +=` dans la boucle
@@ -90,7 +94,7 @@
   /* Construit le calendrier d'activité : 53 semaines de 7 jours, la teinte de
      chaque case reflétant le nombre de prises de vue archivées ce jour-là. */
   function buildActivityCalendar() {
-    var host = UIKit.qs('#calendrier');
+    var host = qs('#calendrier');
     if (!host) return;
 
     var MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
@@ -131,12 +135,12 @@
 
   /* Filtre la galerie sur les mots-clés associés à chaque visuel. */
   function filterGallery() {
-    var champ = UIKit.qs('#q');
-    var info = UIKit.qs('#filter-info');
+    var champ = qs('#q');
+    var info = qs('#filter-info');
     if (!champ) return;
 
     var q = champ.value.trim().toLowerCase();
-    var cards = UIKit.qsa('.card');
+    var cards = qsa('.card');
     var visibles = 0;
 
     for (var i = 0; i < cards.length; i++) {
@@ -165,11 +169,11 @@
      révélée n'est plus observée. La marge basse de -40 px reproduit
      l'ancien test « rect.top < innerHeight - 40 ». */
   function revealCards() {
-    var cards = UIKit.qsa('.card');
+    var cards = qsa('.card');
     if (!cards.length) return;
 
     if (!('IntersectionObserver' in window)) {
-      cards.forEach(function (c) { UIKit.cls(c, 'visible', true); });
+      cards.forEach(function (c) { c.classList.add('visible'); });
       return;
     }
     var io = new IntersectionObserver(function (entries) {
@@ -177,7 +181,7 @@
         var e = entries[i];
         // Comme avant : une carte déjà passée au-dessus de l'écran est révélée.
         if (e.isIntersecting || e.boundingClientRect.top < 0) {
-          UIKit.cls(e.target, 'visible', true);
+          e.target.classList.add('visible');
           io.unobserve(e.target);
         }
       }
@@ -192,7 +196,7 @@
      forcés à chaque événement scroll). Ne dépend pas du scroll : recalculé
      seulement au chargement et au redimensionnement. */
   function equalizeCards() {
-    var cards = UIKit.qsa('.card');
+    var cards = qsa('.card');
     if (!cards.length) return;
     cards.forEach(function (c) { c.style.minHeight = ''; });   // écritures
     var tallest = 0;
@@ -236,28 +240,31 @@
 
   /* Affiche les images une fois chargées. */
   function watchImages() {
-    UIKit.qsa('.card img').forEach(function (img) {
+    qsa('.card img').forEach(function (img) {
       if (img.complete) {
-        UIKit.cls(img, 'loaded', true);
+        img.classList.add('loaded');
       } else {
         img.addEventListener('load', function () {
-          UIKit.cls(img, 'loaded', true);
+          img.classList.add('loaded');
         });
       }
     });
   }
 
-  UIKit.ready(function () {
+  function init() {
     buildKeywordIndex();
     buildActivityCalendar();
     watchImages();
     revealCards();
     equalizeCards();
-    calendrier = UIKit.qs('#calendrier');
+    calendrier = qs('#calendrier');
     fadeCalendar();
-    var champ = UIKit.qs('#q');
+    var champ = qs('#q');
     if (champ) champ.addEventListener('input', filterGallery);
-  });
+  }
+  // Script chargé en defer : le DOM est déjà analysé. Repli si chargé autrement.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 
   // passive : on n'appelle jamais preventDefault(), le navigateur peut
   // défiler sans attendre ce code.
