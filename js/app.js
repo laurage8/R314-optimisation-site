@@ -211,16 +211,23 @@
      Les 7 cases d'une même ligne ont toujours la même position verticale :
      au lieu de lire getBoundingClientRect() sur 371 cases à chaque cran de
      molette, on lit une seule position (le haut de la grille) et on écrit
-     7 variables CSS, une par ligne (voir .calendar dans styles.css). */
+     7 propriétés CSS sur le conteneur, une par ligne (voir .calendar dans
+     styles.css). */
   var calendrier = null;
   var PAS_LIGNE = 11 + 3; // hauteur d'une case + gouttière (cf. styles.css)
+  var dernieres = [];     // dernières valeurs écrites, pour ne rien réécrire d'identique
   function fadeCalendar() {
     if (!calendrier) return;
     var top = calendrier.getBoundingClientRect().top;  // une seule lecture
     var h = window.innerHeight;
     for (var r = 0; r < 7; r++) {
       var d = Math.abs(top + r * PAS_LIGNE - h / 2);
-      calendrier.style.setProperty('--o' + r, Math.max(0.15, 1 - d / h));
+      var o = Math.max(0.15, 1 - d / h).toFixed(3);
+      // Loin de l'écran, toutes les lignes sont à 0.15 : rien à écrire.
+      if (o !== dernieres[r]) {
+        calendrier.style.setProperty('--o' + r, o);
+        dernieres[r] = o;
+      }
     }
   }
 
